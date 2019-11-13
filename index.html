@@ -28,21 +28,65 @@
 	}
 </style>
 <script>
+	var totalRounds = 0;
+	var currentRound = 0;
+	var empty_score = 0;
+	var totalCandidates = 0;
+	var extras = 0;
+
 	function start() {
-		const rounds = document.getElementById("Rounds");
-		const empty_score = document.getElementById("Score");
+		totalRounds = document.getElementById("Rounds");
+		empty_score = document.getElementById("Score");
+
 		if (document.getElementById("Names").files.length != 0) {
 			  var file = document.getElementById("Names").files[0];
 			  var reader = new FileReader();
 			  reader.onload = function(progressEvent){
 			    var lines = this.result.split('\n');
-			    var innerHTML = "<table>";
+			    var innerHTML = "<table align=\"center\">" + generateHTMLForTableRow(["姓名", "总分", "小分"], true);
+
+			    window.candidates = [];
 			    for(var line = 0; line < lines.length; line++){
-			      innerHTML = innerHTML + "<div>" + lines[line] + "</div>";
+			      innerHTML = innerHTML + generateHTMLForTableRow([lines[line], 0, 0], false);
+			      candidates.push({name: lines[line], totalScore:0, bonus:0, nextTable:-1, team:""});
 			    }
+			    console.log(window.candidates);
+
+			    innerHTML += "</table>";
+			    currentRound += 1;
+			    innerHTML += generateHTMLForButtonForRound(currentRound);
+			    totalCandidates = window.candidates.length;
+			    extras = totalCandidates % 4;
+
 			    document.body.innerHTML = innerHTML;
 			  };
 			  reader.readAsText(file);
 		}
-};
+	};
+
+	function generateHTMLForButtonForRound(round) {
+		var text = "<center> <button type=\"button\" onclick=\"startRound()\"> 开始第" + round + "轮"+"</button></center>";
+		return text;
+	}
+
+	function startRound() {
+		var maxTotalScore = 0;
+		for (var i = 0; i < window.candidates.length; i++) {
+			if (window.candidates[i].totalScore > max) max = window.candidates[i].totalScore;
+		}
+
+	}
+
+	function generateHTMLForTableRow(arr, isHeading) {
+		var text = "<tr>"
+		for (var i = 0; i < arr.length; i++) {
+			if (isHeading) {
+				text = text + "<th>" + arr[i] + "</th>";
+			} else {
+				text = text + "<td>" + arr[i] + "</td>";
+			}
+		}
+		text += "</tr>";
+		return text;
+	}
 </script>
