@@ -1,6 +1,6 @@
-<form action = "/list-page" method = "post">
+<form action = "" method = "post">
 	<div>
-		<label for="Score">小分:</label>
+		<label for="Score">轮空小分:</label>
 		<input type = "number" id = "Score" name = "score_setting" min = 0 max = 2 value = 0>
 	</div>
 	<div>
@@ -12,7 +12,37 @@
 		<input type="file" id="Names" name = "Names_setting">
 	</div>
 	<div class="button">
-		<button type="submit">完成</button>
+		<button type="button" onclick = "start()">完成</button>
 		<button type="reset">清空</button>
 	</div>
 </form>
+<style>
+	form {
+	  /* Center the form on the page */
+	  margin: 0 auto;
+	  width: 400px;
+	  /* Form outline */
+	  padding: 1em;
+	  border: 1px solid #CCC;
+	  border-radius: 1em;
+	}
+</style>
+<script>
+	function start() {
+		const rounds = document.getElementById("Rounds");
+		const empty_score = document.getElementById("Score");
+		if (document.getElementById("Names").files.length != 0) {
+			  var file = document.getElementById("Names").files[0];
+			  var reader = new FileReader();
+			  reader.onload = function(progressEvent){
+			    var lines = this.result.split('\n');
+			    var innerHTML = "<table>";
+			    for(var line = 0; line < lines.length; line++){
+			      innerHTML = innerHTML + "<div>" + lines[line] + "</div>";
+			    }
+			    document.body.innerHTML = innerHTML;
+			  };
+			  reader.readAsText(file);
+		}
+};
+</script>
