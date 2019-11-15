@@ -35,8 +35,8 @@
 	var extras = 0;
 
 	function start() {
-		totalRounds = document.getElementById("Rounds");
-		empty_score = document.getElementById("Score");
+		totalRounds = document.getElementById("Rounds").value;
+		empty_score = document.getElementById("Score").value;
 
 		if (document.getElementById("Names").files.length != 0) {
 			  var file = document.getElementById("Names").files[0];
@@ -48,12 +48,11 @@
 			    window.candidates = [];
 			    for(var line = 0; line < lines.length; line++){
 			      innerHTML = innerHTML + generateHTMLForTableRow([lines[line], 0, 0, "参赛", 1], false);
-			      candidates.push({name: lines[line], totalScore:0, bonus:0, nextTable:-1, opponent:""});
+			      candidates.push({name: lines[line], totalScore:0, bonus:0, nextTable:-1, opponent:-1, rank:1, status:"参赛"});
 			    }
 			    console.log(window.candidates);
 
 			    innerHTML += "</table>";
-			    currentRound += 1;
 			    innerHTML += generateHTMLForButtonForRound(currentRound);
 			    totalCandidates = window.candidates.length;
 			    extras = totalCandidates % 2;
@@ -70,6 +69,7 @@
 	}
 
 	function startRound() {
+		currentRound++;
 		var maxTotalScore = 0;
 		if (currentRound == 1) {
 			if (extras == 1) {
@@ -78,8 +78,55 @@
 			} else {
 				generateFirstMatchUp(-1);
 			}
+		} else {
+			for (var i = 0; i < window.candidates.length; i++) {
+				console.log(document.getElementById("score_for_" + i ));
+				window.candidates[i].totalScore += parseInt(document.getElementById("score_for_" + i).value);
+				window.candidates[i].bonus += parseInt(document.getElementById("bonus_for_"+ i).value);
+				window.candidates[i].opponent = -1;
+				window.candidates[i].nextTable = -1;
+			}
 		}
+		displayTable();
 		return;
+	}
+
+	function displayTable() {
+		var innerHTML = "<table align=\"center\">";
+		innerHTML += generateHTMLForTableRow(["姓名", "排名", "总分", "小分","状态", "本轮桌号", "本轮对手", "本轮大分", "本轮小分", "退赛"], true);
+		for (var i = 0; i < window.candidates.length; i++) {
+			innerHTML += generateHTMLForTableRow([
+				window.candidates[i].name,
+				window.candidates[i].rank,
+				window.candidates[i].totalScore,
+				window.candidates[i].bonus,
+				window.candidates[i].status,
+				window.candidates[i].nextTable == -1 ? "轮空" : window.candidates[i].nextTable,
+				window.candidates[i].opponent == -1 ? "轮空" : window.candidates[i].opponent,
+				generateInputBoxForScore(i),
+				generateInputBoxForBonus(i),
+				generateDropoutButton(i),
+				],
+				false);
+		}
+		innerHTML += generateHTMLForButtonForRound(currentRound + 1);
+		document.body.innerHTML = innerHTML;
+		return;
+	}
+
+	function generateInputBoxForScore(index) {
+		var innerHTML = "<input type=\"number\" id = \"score_for_" + index + "\" value = 0>";
+		return innerHTML;
+	}
+
+	function generateInputBoxForBonus(index) {
+		var innerHTML = "<input type=\"number\" id = \"bonus_for_" + index + "\" value = 0>";
+		return innerHTML;
+	}
+
+	function generateDropoutButton(index) {
+		var innerHTML = "<center> <button type=\"button\" onclick=\"\"> 退赛 </button></center>";
+		return innerHTML;
 	}
 
 	function generateFirstMatchUp(sitout) {
@@ -89,19 +136,23 @@
 				candiNum.push(i);
 			}
 		}
-		for (var i = 0; i < totalCandidates; i+=2) {
-			if (i != sitout) {
+		console.log(candiNum);
+		console.log(window.candidates);
+		var tableNumber = 1;
+		for (var i = 0; i < totalCandidates; i++) {
+			if (i != sitout && window.candidates[i].opponent == -1) {
 				var opponentNum = Math.floor((Math.random() * candiNum.length));
-				while (opponentNum == i) {
+				while (candiNum[opponentNum] == i) {
 					opponentNum = Math.floor((Math.random() * candiNum.length));
-				}
-				if (i == totalCandidates - 2 && opponentNum == i) {
-					opponentNum = candiNum.length - opponentNum - 1;
 				}
 				var opponent = candiNum[opponentNum];
 				candiNum.splice(opponentNum, 1);
 				window.candidates[i].opponent = window.candidates[opponent].name;
 				window.candidates[opponent].opponent = window.candidates[i].name;
+				window.candidates[i].nextTable = tableNumber;
+				window.candidates[opponent].nextTable = tableNumber;
+				tableNumber++;
+
 				for (var j = 0; j < candiNum.length; j++) {
 					if (candiNum[j] == i) {
 						candiNum.splice(j, 1);
@@ -110,7 +161,6 @@
 				}
 			}
 		}
-		console.log(window.candidates);
 		return;
 	}
 

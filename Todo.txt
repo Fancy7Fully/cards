@@ -1,0 +1,10 @@
+Finished:
+1. First round of randomized matching
+2. Allow input for first round score and bonus
+3. Finished basic page for first round
+
+Todo:
+1. Have another program that allows team forming
+2. Enable dropout function
+3. Rank teams based on their score and bonus
+4. Enable matching function for subsequent rounds
