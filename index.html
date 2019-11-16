@@ -37,8 +37,8 @@
 	var droppedOutCandidatesHTML = "";
 
 	function start() {
-		totalRounds = document.getElementById("Rounds").value;
-		sitoutScore = document.getElementById("Score").value;
+		totalRounds = parseInt(document.getElementById("Rounds").value);
+		sitoutScore = parseInt(document.getElementById("Score").value);
 
 		if (document.getElementById("Names").files.length != 0) {
 			  var file = document.getElementById("Names").files[0];
@@ -47,12 +47,20 @@
 			    var lines = this.result.split('\n');
 			    var innerHTML = "<table align=\"center\">" + generateHTMLForTableRow(["编号", "姓名", "总分", "小分","状态", "排名"], true);
 
+			    var index = 0;
+			    while (index < lines.length) {
+			    	if (lines[index] == "\n" || lines[index] =="") {
+			    		lines.splice(index, 1);
+			    	} else {
+			    		index++;
+			    	}
+			    }
+			    console.log(lines);
 			    window.candidates = [];
 			    for(var line = 0; line < lines.length; line++){
-			      innerHTML = innerHTML + generateHTMLForTableRow([lines[line], 0, 0, "参赛", 1], false);
+			      innerHTML = innerHTML + generateHTMLForTableRow([line, lines[line], 0, 0, "参赛", 1], false);
 			      candidates.push({rank: 1, number: line, name: lines[line], totalScore:0, bonus:0, status:"参赛", nextTable:-1, opponent:-1, pastOpponents:[]});
-			    }
-			    console.log(window.candidates);
+			    } 
 
 			    innerHTML += "</table>";
 			    innerHTML += generateHTMLForButtonForRound(currentRound + 1);
@@ -66,6 +74,9 @@
 	};
 
 	function generateHTMLForButtonForRound(round) {
+		if (parseInt(round) > totalRounds) {
+			return "<center> <button type=\"button\" onclick=\"finish()\"> 结束比赛 </button></center>";
+		}
 		var text = "<center> <button type=\"button\" onclick=\"startRound()\"> 开始第" + round + "轮"+"</button></center>";
 		return text;
 	}
@@ -80,7 +91,7 @@
 			} else {
 				generateFirstMatchUp(-1);
 			}
-			displayTable();
+			displayTable(true);
 		} else {
 			for (var i = 0; i < window.candidates.length; i++) {
 				if (window.candidates[i].status == "参赛") {
@@ -129,17 +140,11 @@
 		}
 		var curTable = 1;
 		window.flag = false;
-		console.log(currentRound);
-		console.log(window.candidates);
 		generateMatches(0, 0, 1);
 	}
 
 	function generateMatches(index, matches, curTable) {
 		if (window.flag) return;
-		console.log(index);
-		console.log(matches);
-		console.log(totalCandidates);
-		console.log(extras);
 		if (matches + extras >= totalCandidates) {
 			for (var i = window.candidates.length - 1; i >= 0; i--) {
 				if (window.candidates[i].opponent == -1 && window.candidates[i].status == "参赛") {
@@ -153,7 +158,7 @@
 				}
 			}
 			window.flag = true;
-			displayTable();
+			displayTable(true);
 			return;
 		}
 		if (window.candidates[index].opponent != -1 || window.candidates[index].status == "退出") {
@@ -185,8 +190,8 @@
 		}
 	}
 
-	function displayTable() {
-		window.candidates.sort(function (a, b){
+	function displayTable(newRound) {
+		window.candidates.sort(function (a, b) {
 			return compare(a, b);
 		});
 		var innerHTML = "<table align=\"center\">";
@@ -217,10 +222,10 @@
 					window.candidates[i].opponent == -1 ? "轮空" : window.candidates[i].opponent,
 					window.candidates[i].nextTable == -1 
 					? "轮空" 
-					: generateInputBoxForScore(i, document.getElementById("score_for_" + i)),
+					: generateInputBoxForScore(i, newRound ? "0" : document.getElementById("score_for_" + i).value),
 					window.candidates[i].nextTable == -1 
 					? "轮空"
-					 : generateInputBoxForBonus(i, document.getElementById("bonus_for_" + i)),
+					: generateInputBoxForBonus(i, newRound ? "0" : document.getElementById("bonus_for_" + i).value),
 					generateDropoutButton(i),
 				],
 				false);
@@ -232,12 +237,11 @@
 	}
 
 	function generateInputBoxForScore(index, def) {
-		console.log(def);
 		var val = 0;
 		if (def == null) {
 			val = 0;
 		} else {
-			val = parseInt(def.value);
+			val = parseInt(def);
 		}
 		var innerHTML = "<input type=\"number\" id = \"score_for_" + index + "\" value =" + val + ">";
 		return innerHTML;
@@ -248,7 +252,7 @@
 		if (def == null) {
 			val = 0;
 		} else {
-			val = parseInt(def.value);
+			val = parseInt(def);
 		}
 		var innerHTML = "<input type=\"number\" id = \"bonus_for_" + index + "\" value = " + val + ">";
 		return innerHTML;
@@ -263,7 +267,7 @@
 		window.candidates[index].status = "退出";
 		totalCandidates--;
 		extras = totalCandidates % 2;
-		displayTable();
+		displayTable(false);
 	}
 
 	function generateFirstMatchUp(sitout) {
