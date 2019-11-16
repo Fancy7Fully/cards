@@ -33,27 +33,28 @@
 	var empty_score = 0;
 	var totalCandidates = 0;
 	var extras = 0;
+	var sitout = -1;
 
 	function start() {
 		totalRounds = document.getElementById("Rounds").value;
-		empty_score = document.getElementById("Score").value;
+		sitoutScore = document.getElementById("Score").value;
 
 		if (document.getElementById("Names").files.length != 0) {
 			  var file = document.getElementById("Names").files[0];
 			  var reader = new FileReader();
 			  reader.onload = function(progressEvent){
 			    var lines = this.result.split('\n');
-			    var innerHTML = "<table align=\"center\">" + generateHTMLForTableRow(["姓名", "总分", "小分","状态", "排名"], true);
+			    var innerHTML = "<table align=\"center\">" + generateHTMLForTableRow(["编号", "姓名", "总分", "小分","状态", "排名"], true);
 
 			    window.candidates = [];
 			    for(var line = 0; line < lines.length; line++){
 			      innerHTML = innerHTML + generateHTMLForTableRow([lines[line], 0, 0, "参赛", 1], false);
-			      candidates.push({name: lines[line], totalScore:0, bonus:0, nextTable:-1, opponent:-1, rank:1, status:"参赛"});
+			      candidates.push({number: line, name: lines[line], totalScore:0, bonus:0, nextTable:-1, opponent:-1, rank:1, status:"参赛", pastOpponents:[]});
 			    }
 			    console.log(window.candidates);
 
 			    innerHTML += "</table>";
-			    innerHTML += generateHTMLForButtonForRound(currentRound);
+			    innerHTML += generateHTMLForButtonForRound(currentRound + 1);
 			    totalCandidates = window.candidates.length;
 			    extras = totalCandidates % 2;
 
@@ -73,42 +74,103 @@
 		var maxTotalScore = 0;
 		if (currentRound == 1) {
 			if (extras == 1) {
-				var sitout = Math.floor((Math.random() * totalCandidates));
+				sitout = Math.floor((Math.random() * totalCandidates));
 				generateFirstMatchUp(sitout);
 			} else {
 				generateFirstMatchUp(-1);
 			}
 		} else {
 			for (var i = 0; i < window.candidates.length; i++) {
-				console.log(document.getElementById("score_for_" + i ));
-				window.candidates[i].totalScore += parseInt(document.getElementById("score_for_" + i).value);
-				window.candidates[i].bonus += parseInt(document.getElementById("bonus_for_"+ i).value);
-				window.candidates[i].opponent = -1;
-				window.candidates[i].nextTable = -1;
+				if (window.candidates[i].number == sitout) {
+					window.candidates[i].totalScore += parseInt(sitoutScore);
+				} else {
+					window.candidates[i].totalScore += parseInt(document.getElementById("score_for_" + i).value);
+					window.candidates[i].bonus += parseInt(document.getElementById("bonus_for_"+ i).value);
+					window.candidates[i].opponent = -1;
+					window.candidates[i].nextTable = -1;
+				}
 			}
+			generateMatchUpForRound(currentRound);
 		}
 		displayTable();
 		return;
 	}
 
+	function generateMatchUpForRound(round) {
+		window.candidates.sort(function (a, b) {
+			if (a.totalScore > b.totalScore) {
+				return -1;
+			}
+			if (a.totalScore == b.totalScore && a.bonus > b.bonus) {
+				return -1;
+			}
+			if (a.totalScore == b.totalScore && a.bonus == b.bonus) {
+				return 0;
+			}
+			return 1;
+		});
+		window.candidates[0].rank = 1;
+		var curRank = 1;
+		for (var i = 1; i < window.candidates.length; i++) {
+			if (window.candidates[i].totalScore == window.candidates[i - 1].totalScore &&
+				window.candidates[i].bonus == window.candidates[i - 1].bonus) {
+				window.candidates[i].rank = curRank;
+			} else {
+				curRank = i + 1;
+				window.candidates[i].rank = curRank;
+			}
+		}
+		var curTable = 1;
+		var matches = 0;
+		for (var i = 0; i < totalCandidates; i++) {
+			if (matches + extras >= totalCandidates) {
+				break;
+			}
+			if (window.candidates[i].opponent == -1) {
+				for (var j = i + 1; j < totalCandidates - extras; j++) {
+					var f = true;
+					if (window.candidates[j].opponent == -1) {
+						for (var k = 0; k < window.candidates[i].pastOpponents.length; k++) {
+							if (window.candidates[i].pastOpponents[k] == window.candidates[j].number) {
+								f = false;
+								break;
+							}
+						}
+						if (f) {
+							window.candidates[i].opponent = window.candidates[j].name;
+							window.candidates[j].opponent = window.candidates[i].name;
+							window.candidates[i].nextTable = curTable;
+							window.candidates[j].nextTable = curTable;
+							curTable++;
+							matches += 2;
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+
 	function displayTable() {
 		var innerHTML = "<table align=\"center\">";
-		innerHTML += generateHTMLForTableRow(["姓名", "排名", "总分", "小分","状态", "本轮桌号", "本轮对手", "本轮大分", "本轮小分", "退赛"], true);
+		innerHTML += generateHTMLForTableRow(["排名", "编号", "姓名", "总分", "小分","状态", "本轮桌号", "本轮对手", "本轮大分", "本轮小分", "退赛"], true);
 		for (var i = 0; i < window.candidates.length; i++) {
 			innerHTML += generateHTMLForTableRow([
-				window.candidates[i].name,
 				window.candidates[i].rank,
+				window.candidates[i].number,
+				window.candidates[i].name,
 				window.candidates[i].totalScore,
 				window.candidates[i].bonus,
 				window.candidates[i].status,
 				window.candidates[i].nextTable == -1 ? "轮空" : window.candidates[i].nextTable,
 				window.candidates[i].opponent == -1 ? "轮空" : window.candidates[i].opponent,
-				generateInputBoxForScore(i),
-				generateInputBoxForBonus(i),
+				window.candidates[i].nextTable == -1 ? "轮空" : generateInputBoxForScore(i),
+				window.candidates[i].nextTable == -1 ? "轮空" : generateInputBoxForBonus(i),
 				generateDropoutButton(i),
 				],
 				false);
 		}
+		innerHTML += "</table>"
 		innerHTML += generateHTMLForButtonForRound(currentRound + 1);
 		document.body.innerHTML = innerHTML;
 		return;
@@ -136,8 +198,7 @@
 				candiNum.push(i);
 			}
 		}
-		console.log(candiNum);
-		console.log(window.candidates);
+
 		var tableNumber = 1;
 		for (var i = 0; i < totalCandidates; i++) {
 			if (i != sitout && window.candidates[i].opponent == -1) {
@@ -150,6 +211,8 @@
 				window.candidates[i].opponent = window.candidates[opponent].name;
 				window.candidates[opponent].opponent = window.candidates[i].name;
 				window.candidates[i].nextTable = tableNumber;
+				window.candidates[i].pastOpponents.push(window.candidates[opponent].number);
+				window.candidates[opponent].pastOpponents.push(window.candidates[i].number);
 				window.candidates[opponent].nextTable = tableNumber;
 				tableNumber++;
 
@@ -165,7 +228,7 @@
 	}
 
 	function generateHTMLForTableRow(arr, isHeading) {
-		var text = "<tr>"
+		var text = "<tr align=\"center\">"
 		for (var i = 0; i < arr.length; i++) {
 			if (isHeading) {
 				text = text + "<th>" + arr[i] + "</th>";
