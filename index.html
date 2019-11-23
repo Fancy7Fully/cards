@@ -138,14 +138,11 @@
 		var pastOppoLength = candidate.pastOpponents.length;
 		var thisOpponent = candidate.pastOpponents[pastOppoLength - 1];
 		var oppoScore = window.resultTable[document.getElementById("score_for_" + thisOpponent.number).value];
+		candidate.bonus += 13 + thisScore - oppoScore;
 		if (thisScore > oppoScore) {
 			candidate.totalScore += 2;
-			candidate.bonus += 13 + thisScore - oppoScore;
 		} else if (thisScore == oppoScore) {
 			candidate.totalScore += 1;
-			candidate.bonus += 13;
-		} else {
-			candidates.bonus += 13 - (thisScore - oppoScore);
 		}
 		candidate.prevScore = thisScore;
 		return;
@@ -210,7 +207,7 @@
 			if (window.candidates[j].opponent == -1 && window.candidates[j].status == "参赛") {
 				var f = true;
 				for (var k = 0; k < window.candidates[index].pastOpponents.length; k++) {
-					if (window.candidates[index].pastOpponents[k] == window.candidates[j].name) {
+					if (window.candidates[index].pastOpponents[k] == window.candidates[j]) {
 						f = false;
 						break;
 					}
