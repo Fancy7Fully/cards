@@ -1,7 +1,11 @@
 <form action = "" method = "post">
 	<div>
-		<label for="Score">轮空小分:</label>
-		<input type = "number" id = "Score" name = "score_setting" min = 0 max = 2 value = 0>
+		<label for="Score">轮空大分:</label>
+		<input type = "number" id = "Score" name = "score_setting" value = 0>
+	</div>
+	<div>
+		<label for="Rounds">轮空小分:</label>
+		<input type = "number" id = "Bonus" name = "bonus_setting" value = 0>
 	</div>
 	<div>
 		<label for="Rounds">总轮数:</label>
@@ -29,16 +33,32 @@
 </style>
 <script>
 	var totalRounds = 0;
+	var sitoutBonus = 0;
 	var currentRound = 0;
-	var empty_score = 0;
 	var totalCandidates = 0;
 	var extras = 0;
 	var sitout = -1;
 	var droppedOutCandidatesHTML = "";
 
 	function start() {
+		window.resultTable = [];
+		window.resultTable['A'] = 14;
+		window.resultTable['2'] = 2;
+		window.resultTable['3'] = 3;
+		window.resultTable['4'] = 4;
+		window.resultTable['5'] = 5;
+		window.resultTable['6'] = 6;
+		window.resultTable['7'] = 7;
+		window.resultTable['8'] = 8;
+		window.resultTable['9'] = 9;
+		window.resultTable['10'] = 10;
+		window.resultTable['J'] = 11;
+		window.resultTable['Q'] = 12;
+		window.resultTable['K'] = 13;
+		window.resultTable['A+'] = 15;
 		totalRounds = parseInt(document.getElementById("Rounds").value);
 		sitoutScore = parseInt(document.getElementById("Score").value);
+		sitoutBonus = parseInt(document.getElementById("Bonus").value);
 
 		if (document.getElementById("Names").files.length != 0) {
 			  var file = document.getElementById("Names").files[0];
@@ -58,8 +78,8 @@
 			    console.log(lines);
 			    window.candidates = [];
 			    for(var line = 0; line < lines.length; line++){
-			      innerHTML = innerHTML + generateHTMLForTableRow([line, lines[line], 0, 0, "参赛", 1], false);
-			      candidates.push({rank: 1, number: line, name: lines[line], totalScore:0, bonus:0, status:"参赛", nextTable:-1, opponent:-1, pastOpponents:[]});
+			      innerHTML = innerHTML + generateHTMLForTableRow([line + 1, lines[line], 0, 0, "参赛", line + 1], false);
+			      candidates.push({rank: 1, number: line, name: lines[line], totalScore:0, bonus:0, status:"参赛", nextTable:-1, opponent:-1, pastOpponents:[], prevScore:-1});
 			    } 
 
 			    innerHTML += "</table>";
@@ -91,15 +111,18 @@
 			} else {
 				generateFirstMatchUp(-1);
 			}
+			window.candidates.sort(function (a, b) {
+				return compareBasedOnScore(a, b);
+			});
 			displayTable(true);
 		} else {
 			for (var i = 0; i < window.candidates.length; i++) {
 				if (window.candidates[i].status == "参赛") {
 					if (window.candidates[i].number == sitout) {
 						window.candidates[i].totalScore += parseInt(sitoutScore);
+						window.candidates[i].bonus += parseInt(sitoutBonus);
 					} else {
-						window.candidates[i].totalScore += parseInt(document.getElementById("score_for_" + i).value);
-						window.candidates[i].bonus += parseInt(document.getElementById("bonus_for_"+ i).value);
+						calculateScoreFor(window.candidates[i]);
 						window.candidates[i].opponent = -1;
 						window.candidates[i].nextTable = -1;
 					}
@@ -110,33 +133,48 @@
 		return;
 	}
 
-	function compare(a, b) {
+	function calculateScoreFor(candidate) {
+		var thisScore = window.resultTable[document.getElementById("score_for_" + candidate.number).value];
+		var pastOppoLength = candidate.pastOpponents.length;
+		var thisOpponent = candidate.pastOpponents[pastOppoLength - 1];
+		var oppoScore = window.resultTable[document.getElementById("score_for_" + thisOpponent.number).value];
+		if (thisScore > oppoScore) {
+			candidate.totalScore += 2;
+			candidate.bonus += 13 + thisScore - oppoScore;
+		} else if (thisScore == oppoScore) {
+			candidate.totalScore += 1;
+			candidate.bonus += 13;
+		} else {
+			candidates.bonus += 13 - (thisScore - oppoScore);
+		}
+		candidate.prevScore = thisScore;
+		return;
+	}
+
+	function compareBasedOnScore(a, b) {
 		if (a.totalScore > b.totalScore) {
 			return -1;
 		}
 		if (a.totalScore == b.totalScore && a.bonus > b.bonus) {
 			return -1;
 		}
-		if (a.totalScore == b.totalScore && a.bonus == b.bonus && a.status == b.status) {
-			return 0;
+
+		if (a.totalScore == b.totalScore && a.bonus == b.bonus) {
+			if (a.prevScore == b.prevScore) {
+				return 0;
+			} else if (a.prevScore > b.prevScore) {
+				return -1;
+			}
 		}
 		return 1;
 	}
 
 	function generateMatchUpForRound(round) {
 		window.candidates.sort(function (a, b){
-			return compare(a, b);
+			return compareBasedOnScore(a, b);
 		});
-		window.candidates[0].rank = 1;
-		var curRank = 1;
-		for (var i = 1; i < window.candidates.length; i++) {
-			if (window.candidates[i].totalScore == window.candidates[i - 1].totalScore &&
-				window.candidates[i].bonus == window.candidates[i - 1].bonus) {
-				window.candidates[i].rank = curRank;
-			} else {
-				curRank = i + 1;
-				window.candidates[i].rank = curRank;
-			}
+		for (var i = 0; i < window.candidates.length; i++) {
+			window.candidates[i].rank = i + 1;
 		}
 		var curTable = 1;
 		window.flag = false;
@@ -158,6 +196,9 @@
 				}
 			}
 			window.flag = true;
+			window.candidates.sort(function (a, b) {
+				return compareBasedOnScore(a, b);
+			});
 			displayTable(true);
 			return;
 		}
@@ -175,8 +216,8 @@
 					}
 				}
 				if (f) {
-					window.candidates[index].opponent = window.candidates[j].name;
-					window.candidates[j].opponent = window.candidates[index].name;
+					window.candidates[index].opponent = window.candidates[j];
+					window.candidates[j].opponent = window.candidates[index];
 					window.candidates[index].nextTable = curTable;
 					window.candidates[j].nextTable = curTable;
 					generateMatches(index + 1, matches + 2, curTable + 1);
@@ -191,16 +232,13 @@
 	}
 
 	function displayTable(newRound) {
-		window.candidates.sort(function (a, b) {
-			return compare(a, b);
-		});
 		var innerHTML = "<table align=\"center\">";
-		innerHTML += generateHTMLForTableRow(["排名", "编号", "姓名", "总分", "小分","状态", "本轮桌号", "本轮对手", "本轮大分", "本轮小分", "退赛"], true);
+		innerHTML += generateHTMLForTableRow(["排名", "编号", "姓名", "总分", "小分","状态", "本轮桌号", "本轮对手", "本轮成绩", "退赛"], true);
 		for (var i = 0; i < window.candidates.length; i++) {
 			if (window.candidates[i].status == "退出") {
 				innerHTML += generateHTMLForTableRow([
 					window.candidates[i].rank,
-					window.candidates[i].number,
+					window.candidates[i].number + 1,
 					window.candidates[i].name,
 					window.candidates[i].totalScore,
 					window.candidates[i].bonus,
@@ -212,20 +250,17 @@
 					], false);
 			} else {
 				innerHTML += generateHTMLForTableRow([
-				window.candidates[i].rank,
-					window.candidates[i].number,
+					window.candidates[i].rank,
+					window.candidates[i].number + 1,
 					window.candidates[i].name,
 					window.candidates[i].totalScore,
 					window.candidates[i].bonus,
 					window.candidates[i].status,
 					window.candidates[i].nextTable == -1 ? "轮空" : window.candidates[i].nextTable,
-					window.candidates[i].opponent == -1 ? "轮空" : window.candidates[i].opponent,
+					window.candidates[i].opponent == -1 ? "轮空" : window.candidates[i].opponent.name,
 					window.candidates[i].nextTable == -1 
 					? "轮空" 
-					: generateInputBoxForScore(i, newRound ? "0" : document.getElementById("score_for_" + i).value),
-					window.candidates[i].nextTable == -1 
-					? "轮空"
-					: generateInputBoxForBonus(i, newRound ? "0" : document.getElementById("bonus_for_" + i).value),
+					: generateInputBoxForScore(window.candidates[i].number, newRound ? "0" : document.getElementById("score_for_" + window.candidates[i].number).value),
 					generateDropoutButton(i),
 				],
 				false);
@@ -233,7 +268,39 @@
 		}
 		innerHTML += "</table>"
 		innerHTML += generateHTMLForButtonForRound(currentRound + 1);
+		innerHTML += generateHTMLForButtonForNumberSort();
+		innerHTML += generateHTMLForButtonForScoreSort();
 		document.body.innerHTML = innerHTML;
+	}
+
+	function generateHTMLForButtonForNumberSort() {
+		var innerHTML = "<center> <button type=\"button\" onclick=\"sortBasedOnNumber()\"> 按编号顺序显示 </button></center>";
+		return innerHTML;
+	}
+
+	function generateHTMLForButtonForScoreSort() {
+		var innerHTML = "<center> <button type=\"button\" onclick=\"sortBasedOnScore()\"> 按分数顺序显示 </button></center>";
+		return innerHTML;
+	}
+
+	function sortBasedOnNumber() {
+		window.candidates.sort(function (a, b) {
+			return compareBasedOnNumber(a, b);
+		});
+		displayTable(false);
+	}
+
+	function sortBasedOnScore() {
+		window.candidates.sort(function (a, b) {
+			return compareBasedOnScore(a, b);
+		});
+		displayTable(false);
+	}
+
+	function compareBasedOnNumber(a, b) {
+		if (a.number > b.number) return 1;
+		if (a.number < b.number) return -1;
+		return 0;
 	}
 
 	function generateInputBoxForScore(index, def) {
@@ -243,7 +310,7 @@
 		} else {
 			val = parseInt(def);
 		}
-		var innerHTML = "<input type=\"number\" id = \"score_for_" + index + "\" value =" + val + ">";
+		var innerHTML = "<input type=\"text\" id = \"score_for_" + index + "\" value =" + val + ">";
 		return innerHTML;
 	}
 
@@ -267,7 +334,7 @@
 		window.candidates[index].status = "退出";
 		totalCandidates--;
 		extras = totalCandidates % 2;
-		displayTable(false);
+		sortBasedOnScore();
 	}
 
 	function generateFirstMatchUp(sitout) {
@@ -287,11 +354,11 @@
 				}
 				var opponent = candiNum[opponentNum];
 				candiNum.splice(opponentNum, 1);
-				window.candidates[i].opponent = window.candidates[opponent].name;
-				window.candidates[opponent].opponent = window.candidates[i].name;
+				window.candidates[i].opponent = window.candidates[opponent];
+				window.candidates[opponent].opponent = window.candidates[i];
 				window.candidates[i].nextTable = tableNumber;
-				window.candidates[i].pastOpponents.push(window.candidates[opponent].name);
-				window.candidates[opponent].pastOpponents.push(window.candidates[i].name);
+				window.candidates[i].pastOpponents.push(window.candidates[opponent]);
+				window.candidates[opponent].pastOpponents.push(window.candidates[i]);
 				window.candidates[opponent].nextTable = tableNumber;
 				tableNumber++;
 
