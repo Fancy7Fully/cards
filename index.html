@@ -84,8 +84,8 @@
 			    window.candidatesPreviousRecord = [];
 			    for(var line = 0; line < lines.length; line++){
 			      innerHTML = innerHTML + generateHTMLForTableRow([line + 1, lines[line], 0, 0, "参赛", line + 1], false);
-			      candidates.push({rank: 1, number: line, name: lines[line], totalScore:0, bonus:0, status:"参赛", nextTable:-1, opponent:-1, pastOpponents:[], prevScore:-1});
-			      candidatesPreviousRecord.push({rank: 1, number: line, name: lines[line], totalScore:0, bonus:0, status:"参赛", nextTable:-1, opponent:-1, pastOpponents:[], prevScore:-1});
+			      window.candidates.push({rank: 1, number: line, name: lines[line], totalScore:0, bonus:0, status:"参赛", nextTable:-1, opponent:-1, pastOpponents:[], prevScore:-1});
+			      window.candidatesPreviousRecord.push({rank: 1, number: line, name: lines[line], totalScore:0, bonus:0, status:"参赛", nextTable:-1, opponent:-1, pastOpponents:[], prevScore:-1});
 			    } 
 
 			    innerHTML += "</table>";
@@ -101,13 +101,22 @@
 
 	function generateHTMLForButtonForRound(round) {
 		if (parseInt(round) > totalRounds) {
-			return "<center> <button type=\"button\" onclick=\"finish()\"> 结束比赛 </button></center>";
+			return "<center> <button type=\"button\" onclick=\"startRound()\"> 结束比赛 </button></center>";
 		}
 		var text = "<center> <button type=\"button\" onclick=\"startRound()\"> 开始第" + round + "轮"+"</button></center>";
 		return text;
 	}
 
 	function startRound() {
+		for (var i = 0; i < window.candidates.length; i++) {
+			var ele = document.getElementById("score_for_" + i);
+			if (ele != null) {
+				if (ele.value == "0") {
+					alert("数据未输入完毕！");
+					return;
+				}
+			}
+		}
 		currentRound++;
 		if (currentRound > 1) {
 			shouldShowBackButton = true;
@@ -126,6 +135,7 @@
 			displayTable(true);
 		} else {
 			prevSitout = sitout;
+			prevHTML = currentHTML;
 			for (var i = 0; i < window.candidates.length; i++) {
 				window.candidatesPreviousRecord[i].status = window.candidates[i].status;
 				window.candidatesPreviousRecord[i].number = window.candidates[i].number;
@@ -147,10 +157,10 @@
 						window.candidates[i].bonus += parseInt(sitoutBonus);
 					} else {
 						calculateScoreFor(window.candidates[i]);
-						window.candidates[i].opponent = -1;
-						window.candidates[i].nextTable = -1;
 					}
 				}
+				window.candidates[i].opponent = -1;
+				window.candidates[i].nextTable = -1;
 			}
 			generateMatchUpForRound(currentRound);
 		}
@@ -158,13 +168,13 @@
 	}
 
 	function calculateScoreFor(candidate) {
-		var thisScore = window.resultTable[document.getElementById("score_for_" + candidate.number).value];
+		var thisScore = window.resultTable[document.getElementById("score_for_" + candidate.number).value.toUpperCase()];
 		var pastOppoLength = candidate.pastOpponents.length;
 		var thisOpponentNumber = candidate.pastOpponents[pastOppoLength - 1];
 		var thisOpponent = -1;
-		for (var i = 0; i < candidates.length; i++) {
-			if (candidates[i].number == thisOpponentNumber) {
-				thisOpponent = candidates[i];
+		for (var i = 0; i < window.candidates.length; i++) {
+			if (window.candidates[i].number == thisOpponentNumber) {
+				thisOpponent = window.candidates[i];
 				break;
 			}
 		}
@@ -173,7 +183,7 @@
 			candidate.bonus += sitoutBonus;
 			return;
 		}
-		var oppoScore = window.resultTable[document.getElementById("score_for_" + thisOpponent.number).value];
+		var oppoScore = window.resultTable[document.getElementById("score_for_" + thisOpponent.number).value.toUpperCase()];
 		candidate.bonus += 13 + thisScore - oppoScore;
 		if (thisScore > oppoScore) {
 			candidate.totalScore += 2;
@@ -212,10 +222,14 @@
 		var curTable = 1;
 		window.flag = false;
 		generateMatches(0, 0, 1);
+		console.log(window.candidates);
+					console.log("NONONO>?");
 	}
 
 	function generateMatches(index, matches, curTable) {
-		if (window.flag) return;
+		if (window.flag) {
+			return;
+		}
 		if (matches + extras >= totalCandidates) {
 			for (var i = window.candidates.length - 1; i >= 0; i--) {
 				if (window.candidates[i].opponent == -1 && window.candidates[i].status == "参赛") {
@@ -225,43 +239,56 @@
 			}
 			for (var i = 0; i < totalCandidates; i++) {
 				if (window.candidates[i].opponent != -1 && window.candidates[i].status == "参赛") {
-					window.candidates[i].pastOpponents.push(window.candidates[i].opponent.number);
+					window.candidates[i].pastOpponents.push(window.candidates[i].opponent);
 				}
 			}
 			window.flag = true;
 			window.candidates.sort(function (a, b) {
 				return compareBasedOnScore(a, b);
 			});
+			console.log(window.candidates);
 			displayTable(true);
 			return;
 		}
 		if (window.candidates[index].opponent != -1 || window.candidates[index].status == "退出") {
 			generateMatches(index + 1, matches, curTable);
-			return;
-		}
-		for (var j = index + 1; j < window.candidates.length; j++) {
-			if (window.candidates[j].opponent == -1 && window.candidates[j].status == "参赛") {
-				var f = true;
-				for (var k = 0; k < window.candidates[index].pastOpponents.length; k++) {
-					if (window.candidates[index].pastOpponents[k] == window.candidates[j].number) {
-						f = false;
-						break;
+		} else {
+			for (var j = 0; j < window.candidates.length; j++) {
+				if (window.candidates[j].opponent == -1 && window.candidates[j].status == "参赛" && window.candidates[j].number != window.candidates[index].number) {
+					var f = true;
+					for (var k = 0; k < window.candidates[index].pastOpponents.length; k++) {
+						if (window.candidates[index].pastOpponents[k] == window.candidates[j].number) {
+							f = false;
+						}
+					}
+					if (f) {
+						console.log(index + " " + window.candidates[index].number + " " + window.candidates[j].number + " " + totalCandidates);
+						window.candidates[index].opponent = window.candidates[j].number;
+						window.candidates[j].opponent = window.candidates[index].number;
+						window.candidates[index].nextTable = curTable;
+						window.candidates[j].nextTable = curTable;
+						var debug = [];
+						for (var l = 0; l < window.candidates.length; l++) {
+							debug.push({rank: window.candidates[l].rank,
+								number: window.candidates[l].number,
+							  	name: window.candidates[l].name, 
+							  	status:"参赛", 
+							  	opponent:window.candidates[l].opponent});
+						}
+						console.log(debug);
+						generateMatches(index + 1, matches + 2, curTable + 1);
+						if (window.flag) return;
+						window.candidates[index].opponent = -1;
+						window.candidates[j].opponent = -1;
+						window.candidates[index].nextTable = -1;
+						window.candidates[j].nextTable = -1;
 					}
 				}
-				if (f) {
-					window.candidates[index].opponent = window.candidates[j];
-					window.candidates[j].opponent = window.candidates[index];
-					window.candidates[index].nextTable = curTable;
-					window.candidates[j].nextTable = curTable;
-					generateMatches(index + 1, matches + 2, curTable + 1);
-					if (window.flag) return;
-					window.candidates[index].opponent = -1;
-					window.candidates[j].opponent = -1;
-					window.candidates[index].nextTable = -1;
-					window.candidates[j].nextTable = -1;
-				}
 			}
+			console.log(window.candidates);
+			console.log("Not Found At Index" + index);
 		}
+		return;
 	}
 
 	function displayTable(isNewRound) {
@@ -270,7 +297,7 @@
 		for (var i = 0; i < window.candidates.length; i++) {
 			if (window.candidates[i].status == "退出") {
 				innerHTML += generateHTMLForTableRow([
-					window.candidates[i].rank,
+					i + 1,
 					window.candidates[i].number + 1,
 					window.candidates[i].name,
 					window.candidates[i].totalScore,
@@ -283,42 +310,43 @@
 					], false);
 			} else {
 				innerHTML += generateHTMLForTableRow([
-					window.candidates[i].rank,
+					i + 1,
 					window.candidates[i].number + 1,
 					window.candidates[i].name,
 					window.candidates[i].totalScore,
 					window.candidates[i].bonus,
 					window.candidates[i].status,
 					window.candidates[i].nextTable == -1 ? "轮空" : window.candidates[i].nextTable,
-					window.candidates[i].opponent == -1 ? "轮空" : window.candidates[i].opponent.name,
+					window.candidates[i].opponent == -1 ? "轮空" : findOpponentWithNumber(window.candidates[i].opponent).name,
 					window.candidates[i].nextTable == -1 
 					? "轮空" 
-					: generateInputBoxForScore(window.candidates[i].number, isNewRound ? "0" : document.getElementById("score_for_" + window.candidates[i].number).value),
+					: generateInputBoxForScore(window.candidates[i].number, isNewRound ? "2" : document.getElementById("score_for_" + window.candidates[i].number).value),
 					generateDropoutButton(i),
 				],
 				false);
 			}
 		}
 		innerHTML += "</table>"
-		innerHTML += generateHTMLForButtonForRound(currentRound + 1);
+		if (currentRound <= totalRounds) {
+			innerHTML += generateHTMLForButtonForRound(currentRound + 1);
+		}
 		innerHTML += generateHTMLForButtonForNumberSort();
 		innerHTML += generateHTMLForButtonForScoreSort();
-		if (shouldChangePrevHTML) {
-			if (prevHTML == "") {
-				prevHTML = innerHTML;
-				currentHTML = innerHTML;
-			} else {
-				prevHTML = currentHTML;
-				currentHTML = innerHTML;
-			}
-		} else {
-			shouldChangePrevHTML = true;
-		}
+		var buttonHTML = "";
 		if (shouldShowBackButton) {
-			innerHTML += generateHTMLForButtonForPreviousRound();
+			buttonHTML += generateHTMLForButtonForPreviousRound();
 		}
 
-		document.body.innerHTML = innerHTML;
+		currentHTML = innerHTML;
+		document.body.innerHTML = innerHTML + buttonHTML;
+	}
+
+	function findOpponentWithNumber(number) {
+		for (var i = 0; i < window.candidates.length; i++) {
+			if (window.candidates[i].number == number) {
+				return window.candidates[i];
+			}
+		}
 	}
 
 	function generateHTMLForButtonForPreviousRound() {
@@ -337,7 +365,8 @@
 	}
 
 	function backToPreviousRound() {
-		for (var i = 0; i < candidates.length; i++) {
+		totalCandidates = 0;
+		for (var i = 0; i < window.candidates.length; i++) {
 			window.candidates[i].status = window.candidatesPreviousRecord[i].status;
 			window.candidates[i].number = window.candidatesPreviousRecord[i].number;
 			window.candidates[i].totalScore = window.candidatesPreviousRecord[i].totalScore;
@@ -347,14 +376,17 @@
 			window.candidates[i].name = window.candidatesPreviousRecord[i].name;
 			window.candidates[i].prevScore = window.candidatesPreviousRecord[i].prevScore;
 			window.candidates[i].pastOpponents.length = 0;
-			for (var j = 0; j < candidatesPreviousRecord[i].pastOpponents.length; j++) {
+			for (var j = 0; j < window.candidatesPreviousRecord[i].pastOpponents.length; j++) {
 				window.candidates[i].pastOpponents.push(window.candidatesPreviousRecord[i].pastOpponents[j]);
 			}
+			if (window.candidates[i].status == "参赛") totalCandidates++;
 		}
+		extras = totalCandidates % 2;
 		sitout = prevSitout;
 
 		var innerHTML = prevHTML;
 		document.body.innerHTML = innerHTML;
+		currentHTML = document.body.innerHTML;
 		shouldChangePrevHTML = false;
 		shouldShowBackButton = false;
 		currentRound--;
@@ -372,6 +404,9 @@
 		window.candidates.sort(function (a, b) {
 			return compareBasedOnScore(a, b);
 		});
+		for (var i = 0; i < window.candidates.length; i++) {
+
+		}
 		displayTable(false);
 	}
 
@@ -382,24 +417,13 @@
 	}
 
 	function generateInputBoxForScore(index, def) {
-		var val = 0;
+		var val = "2";
 		if (def == null) {
-			val = 0;
+			val = "2";
 		} else {
-			val = parseInt(def);
+			val = def;
 		}
-		var innerHTML = "<input type=\"text\" id = \"score_for_" + index + "\" value =" + val + ">";
-		return innerHTML;
-	}
-
-	function generateInputBoxForBonus(index, def) {
-		var val = 0;
-		if (def == null) {
-			val = 0;
-		} else {
-			val = parseInt(def);
-		}
-		var innerHTML = "<input type=\"number\" id = \"bonus_for_" + index + "\" value = " + val + ">";
+		var innerHTML = "<input type=\"text\" id = \"score_for_" + index + "\" value =\"" + val + "\">";
 		return innerHTML;
 	}
 
@@ -432,8 +456,8 @@
 				}
 				var opponent = candiNum[opponentNum];
 				candiNum.splice(opponentNum, 1);
-				window.candidates[i].opponent = window.candidates[opponent];
-				window.candidates[opponent].opponent = window.candidates[i];
+				window.candidates[i].opponent = window.candidates[opponent].number;
+				window.candidates[opponent].opponent = window.candidates[i].number;
 				window.candidates[i].nextTable = tableNumber;
 				window.candidates[i].pastOpponents.push(window.candidates[opponent].number);
 				window.candidates[opponent].pastOpponents.push(window.candidates[i].number);
@@ -443,7 +467,6 @@
 				for (var j = 0; j < candiNum.length; j++) {
 					if (candiNum[j] == i) {
 						candiNum.splice(j, 1);
-						break;
 					}
 				}
 			}
